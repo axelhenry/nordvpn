@@ -39,6 +39,7 @@ kill_switch() {
 	fi
 	[[ -n ${NETWORK} ]]  && for net in ${NETWORK//[;,]/ };  do return_route ${net};  done
 	[[ -n ${WHITELIST} ]] && for domain in ${WHITELIST//[;,]/ }; do white_list ${domain}; done
+	[[ -n ${NETWORK} ]] && [[ -n ${GATEWAY} ]] && for net in ${NETWORK//[;,]/ }; do configure_gateway ${net}; done
 
 	ip6tables -F 2>/dev/null
 	ip6tables -X 2>/dev/null
@@ -70,6 +71,7 @@ kill_switch() {
 		ip6tables -A OUTPUT -d ${docker6_network} -j ACCEPT 2>/dev/null
 	fi
 	[[ -n ${NETWORK6} ]] && for net in ${NETWORK6//[;,]/ }; do return_route6 ${net}; done
+	[[ -n ${NETWORK6} ]] && [[ -n ${GATEWAY6} ]] && for net in ${NETWORK6//[;,]/ }; do configure_gateway6 ${net}; done
 }
 
 return_route() { # Add a route back to your network, so that return traffic works
@@ -88,6 +90,14 @@ return_route6() { # Add a route back to your network, so that return traffic wor
 	ip6tables -A FORWARD -d $network -j ACCEPT 2>/dev/null
 	ip6tables -A FORWARD -s $network -j ACCEPT 2>/dev/null
 	ip6tables -A OUTPUT -d $network -j ACCEPT 2>/dev/null
+}
+
+configure_gateway() {
+	iptables -t nat -I POSTROUTING -o nordlynx -s "$1" -j MASQUERADE
+}
+
+configure_gateway6() {
+	ip6tables -t nat -I POSTROUTING -o nordlynx -s "$1" -j MASQUERADE
 }
 
 white_list() { # Allow unsecured traffic for an specific domain
